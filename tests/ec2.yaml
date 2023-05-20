@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create EC2 instance
+
+Parameters:
+  instanceTypeParameter:
+    Description: Select instance type. Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
+Resources:
+  instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref instanceTypeParameter
+      ImageId: ami-04e601abe3e1a910f # Ubuntu, 22.04 LTS, 64-bit, x86 (free tier)
+      Tags:
+        - Key: Name
+          Value: oneminutelife-instance
