@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Create test S3 bucket"
+
+Resources:
+  s3Bucket: # Logical ID - should be unique
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: test-skillup-s3bucket
+      Tags:
+        - Key: Name
+          Value: TestS3Bucket
+
+Outputs:
+  s3BucketName:
+    Value: !Ref 's3Bucket'
