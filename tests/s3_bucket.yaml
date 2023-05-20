@@ -1,15 +1,23 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "Create test S3 bucket"
+Description: Create test S3 bucket
+
+Parameters:
+  s3BucketNameParameter:
+    Description: Enter S3 bucket name
+    Type: String
+    MinLength: 8
+    MaxLength: 24
+    AllowedPattern: "[a-z0-9-]+" # test-string, test-string-two, test1-string2 ...
 
 Resources:
-  s3Bucket: # Logical ID - should be unique
+  s3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: test-skillup-s3bucket
+      BucketName: !Ref s3BucketNameParameter
       Tags:
         - Key: Name
           Value: TestS3Bucket
 
 Outputs:
-  s3BucketName:
-    Value: !Ref 's3Bucket'
+  s3BucketNameOutput:
+    Value: !Ref s3Bucket
