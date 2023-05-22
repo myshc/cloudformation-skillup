@@ -10,3 +10,4 @@ Goal:
 * Route53
 * ACM attached to ALB
 * SSM Parameter Store with encryption
+* compare terraform and CF
