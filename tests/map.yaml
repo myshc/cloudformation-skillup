@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create EC2 instance
+
+Parameters:
+  environment:
+    Description: Choose the environment. Default is dev.
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+      - qa
+
+Mappings:
+  environmentMap:
+    dev:
+      instanceType: t2.micro
+      name: dev
+    qa:
+      instanceType: t3.micro
+      name: qa
+    prod:
+      instanceType: t4g.small
+      name: prod
+
+Resources:
+  instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !FindInMap [environmentMap, !Ref environment, instanceType]
+      ImageId: ami-04e601abe3e1a910f # Ubuntu, 22.04 LTS, 64-bit, x86 (free tier)
+      Tags:
+        - Key: Name
+          Value: !FindInMap [environmentMap, !Ref environment, name]
+
+Outputs:
+  instanceName:
+    Value: !Ref instance
