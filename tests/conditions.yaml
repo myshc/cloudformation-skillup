@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create EC2 instance
+
+Parameters:
+  environment:
+    Description: Choose the environment. Default is dev.
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+      - qa
+
+Conditions:
+  createProdResources: !Equals [!Ref environment, prod]
+
+Mappings:
+  environmentMap:
+    dev:
+      instanceType: t2.micro
+      name: dev
+    qa:
+      instanceType: t3.micro
+      name: qa
+    prod:
+      instanceType: t2.micro
+      name: prod
+
+Resources:
+  instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !FindInMap [environmentMap, !Ref environment, instanceType]
+      ImageId: ami-04e601abe3e1a910f # Ubuntu, 22.04 LTS, 64-bit, x86 (free tier)
+      Tags:
+        - Key: Name
+          Value: !FindInMap [environmentMap, !Ref environment, name]
+
+  prodInstanceMountPoint:
+    Type: AWS::EC2::VolumeAttachment
+    Condition: createProdResources
+    Properties:
+      Device: /dev/sdh 
+      InstanceId: !Ref instance 
+      VolumeId: !Ref prodInstanceSecondVolume 
+
+  prodInstanceSecondVolume:
+    Type: AWS::EC2::Volume
+    Condition: createProdResources
+    Properties:
+      Size: 20 
+      AvailabilityZone: !GetAtt instance.AvailabilityZone
+
+Outputs:
+  instanceName:
+    Value: !Ref instance
