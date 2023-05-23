@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Change set 
+
+
+Parameters:
+  s3BucketName:
+    Description: Enter s3 bucket name
+    Type: String
+
+  instanceTypeParameter:
+    Description: Select instance type. Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
+
+Resources:
+  s3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref s3BucketName
+
+  instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref instanceTypeParameter
+      ImageId: ami-04e601abe3e1a910f # Ubuntu, 22.04 LTS, 64-bit, x86 (free tier)
+
+
+Outputs:
+  s3BucketNameOutput:
+    Value: !Ref s3Bucket
