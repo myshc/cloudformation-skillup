@@ -1,5 +1,4 @@
 # CloudFormation skillup
-NIX Terraform skillup but in CloudFormation.
 
 Goal:
 * VPC
@@ -10,4 +9,5 @@ Goal:
 * Route53
 * ACM attached to ALB
 * SSM Parameter Store with encryption
+* nested templates
 * compare terraform and CF

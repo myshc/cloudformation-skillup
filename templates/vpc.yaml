@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: VPC 
+
+
+Parameters:
+  VPCCidr:
+    Type: String
+    Default: 192.168.88.0/26 
+
+  PublicSubnetCidr:
+    Type: String
+    Default: 192.168.88.16/28 
+
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC   
+    Properties:
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: false
+      EnableDnsSupport: false
+      Tags: 
+        - Key: Name
+          Value: CF-Skillup-VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: CF-Skillup-IG
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      VpcId: !Ref VPC 
+      InternetGatewayId: !Ref InternetGateway 
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnetCidr
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: CF-Skillup-PublicSubnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+      - Key: Name
+        Value: CF-Skillup-RouteTable
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+    DependsOn:
+      - VPCGatewayAttachment
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet 
+
+
+Outputs:
+  VpcId:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}::VpcId
+
+  VpcCidr:
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: !Sub ${AWS::StackName}::VpcCidr
+
+  PublicSubnetId:
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub ${AWS::StackName}::PublicSubnetId
