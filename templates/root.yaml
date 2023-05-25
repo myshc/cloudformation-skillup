@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Root template that brings all stacks together.
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  TemplatesBucketURL:
+    Description: |
+      Specify the s3 bucket where the CF templates are located.
+      Default is https://s3.amazonaws.com/mysh-cf-templates
+    Type: String
+    Default: https://s3.amazonaws.com/mysh-cf-templates
+
+  VPCCidr:
+    Description: |
+      Enter VPC CIDR block.
+      Default is 192.168.88.0/26
+    Type: String
+    Default: 192.168.88.0/26
+
+  PublicSubnetCidr:
+    Description: |
+      Enter public subnet CIDR block.
+      Default is 192.168.88.16/28
+    Type: String
+    Default: 192.168.88.16/28 
+
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/vpc.yaml
+      Parameters:
+        Environment: !Ref Environment
+        VPCCidr: !Ref VPCCidr
+        PublicSubnetCidr: !Ref PublicSubnetCidr

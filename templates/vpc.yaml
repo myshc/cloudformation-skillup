@@ -1,13 +1,30 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: VPC 
+Description: Create VPC with 1 public subnet 
 
 
 Parameters:
-  VPCCidr:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
     Type: String
-    Default: 192.168.88.0/26 
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA 
+      - Prod
+
+  VPCCidr:
+    Description: |
+      Enter VPC CIDR block.
+      Default is 192.168.88.0/26
+    Type: String
+    Default: 192.168.88.0/26
 
   PublicSubnetCidr:
+    Description: |
+      Enter public subnet CIDR block.
+      Default is 192.168.88.16/28
     Type: String
     Default: 192.168.88.16/28 
 
@@ -21,14 +38,14 @@ Resources:
       EnableDnsSupport: false
       Tags: 
         - Key: Name
-          Value: CF-Skillup-VPC
+          Value: !Sub ${Environment}-VPC
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
       - Key: Name
-        Value: CF-Skillup-IG
+        Value: !Sub ${Environment}-IG
 
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -45,7 +62,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
       - Key: Name
-        Value: CF-Skillup-PublicSubnet
+        Value: !Sub ${Environment}-PublicSubnet
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -53,7 +70,7 @@ Resources:
       VpcId: !Ref VPC 
       Tags: 
       - Key: Name
-        Value: CF-Skillup-RouteTable
+        Value: !Sub ${Environment}-RouteTable
 
   PublicRoute:
     Type: AWS::EC2::Route
