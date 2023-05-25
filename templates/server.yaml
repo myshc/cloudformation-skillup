@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create EC2 instance 
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  InstanceType:
+    Description: |
+      Select EC2 instance type.
+      Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
+  LatestAmiId:
+    Description: |
+      Enter SSM Parameter for AMI.
+      Default is /aws/service/debian/release/11/latest/amd64
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/debian/release/11/latest/amd64
+
+  PublicSubnetId:
+    Description: Enter a valid public subnet id
+    Type: AWS::EC2::Subnet::Id
+
+  WebSecurityGroupId:
+    Description: Enter a valid web security group id
+    Type: AWS::EC2::SecurityGroup::Id
+
+
+Resources:
+  WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType 
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: !Select [0, !GetAZs '']
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds: [!Ref WebSecurityGroupId]
+      KeyName: mysh
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Web

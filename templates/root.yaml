@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Root template that brings all stacks together.
+Description: Root stack that brings all stacks together.
 
 
 Parameters:
@@ -21,6 +21,8 @@ Parameters:
     Type: String
     Default: https://s3.amazonaws.com/mysh-cf-templates
 
+  ####################### VPC stack parameters #######################
+
   VPCCidr:
     Description: |
       Enter VPC CIDR block.
@@ -35,6 +37,19 @@ Parameters:
     Type: String
     Default: 192.168.88.16/28 
 
+  ##################### Server stack parameters ######################
+
+  InstanceType:
+    Description: |
+      Select EC2 instance type.
+      Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
 
 Resources:
   VPCStack:
@@ -45,3 +60,21 @@ Resources:
         Environment: !Ref Environment
         VPCCidr: !Ref VPCCidr
         PublicSubnetCidr: !Ref PublicSubnetCidr
+ 
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/security.yaml
+      Parameters:
+        Environment: !Ref Environment
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+
+  ServerStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/server.yaml
+      Parameters:
+        Environment: !Ref Environment
+        InstanceType: !Ref InstanceType
+        PublicSubnetId: !GetAtt VPCStack.Outputs.PublicSubnetId
+        WebSecurityGroupId: !GetAtt SecurityStack.Outputs.WebSecurityGroupId

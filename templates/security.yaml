@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create Secutiry Group
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+
+Resources:
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: !Sub ${Environment} Web server security group
+      GroupName: !Sub ${Environment}WebSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow outbound traffic to all destinations
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Web-SG
+
+
+Outputs:
+  WebSecurityGroupId:
+    Value: !Ref WebSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::WebSecurityGroupId
