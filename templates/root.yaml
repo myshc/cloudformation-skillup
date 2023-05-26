@@ -16,7 +16,8 @@ Metadata:
         Parameters:
           - VPCCidr
           - PublicSubnetCidr
-          - PrivateDBSubnetCidr
+          - PrivateDBSubnet01Cidr
+          - PrivateDBSubnet02Cidr
 
       - Label:
           default: Server parameters
@@ -65,11 +66,18 @@ Parameters:
   PublicSubnetCidr:
     Description: |
       Enter public subnet CIDR block.
-      Default is 192.168.88.16/28
+      Default is 192.168.88.0/28
     Type: String
-    Default: 192.168.88.16/28 
+    Default: 192.168.88.0/28 
 
-  PrivateDBSubnetCidr:
+  PrivateDBSubnet01Cidr:
+    Description: |
+      Enter private DB subnet CIDR block.
+      Default is 192.168.88.32/28
+    Type: String
+    Default: 192.168.88.32/28 
+
+  PrivateDBSubnet02Cidr:
     Description: |
       Enter private DB subnet CIDR block.
       Default is 192.168.88.48/28
@@ -153,7 +161,8 @@ Resources:
         Environment: !Ref Environment
         VPCCidr: !Ref VPCCidr
         PublicSubnetCidr: !Ref PublicSubnetCidr
-        PrivateDBSubnetCidr: !Ref PrivateDBSubnetCidr
+        PrivateDBSubnet01Cidr: !Ref PrivateDBSubnet01Cidr
+        PrivateDBSubnet02Cidr: !Ref PrivateDBSubnet02Cidr
  
   SecurityStack:
     Type: AWS::CloudFormation::Stack
@@ -185,5 +194,9 @@ Resources:
         DBMasterPassword: !Ref DBMasterPassword
         DBStorage: !Ref DBStorage
         DBEngine: !Ref DBEngine
-        DBSubnetId: !GetAtt VPCStack.Outputs.PrivateDBSubnetId
+        DBSubnetIds: 
+          Fn::Join:
+            - ','
+            - - !GetAtt VPCStack.Outputs.PrivateDBSubnet01Id
+              - !GetAtt VPCStack.Outputs.PrivateDBSubnet02Id
         DBSecurityGroupId: !GetAtt SecurityStack.Outputs.DBSecurityGroupId

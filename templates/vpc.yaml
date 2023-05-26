@@ -24,11 +24,18 @@ Parameters:
   PublicSubnetCidr:
     Description: |
       Enter public subnet CIDR block.
-      Default is 192.168.88.16/28
+      Default is 192.168.88.0/28
     Type: String
-    Default: 192.168.88.16/28 
+    Default: 192.168.88.0/28 
 
-  PrivateDBSubnetCidr:
+  PrivateDBSubnet01Cidr:
+    Description: |
+      Enter private DB subnet CIDR block.
+      Default is 192.168.88.32/28
+    Type: String
+    Default: 192.168.88.32/28 
+
+  PrivateDBSubnet02Cidr:
     Description: |
       Enter private DB subnet CIDR block.
       Default is 192.168.88.48/28
@@ -94,15 +101,25 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet 
 
-  PrivateDBSubnet:
+  PrivateDBSubnet01:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: !Ref PrivateDBSubnetCidr
+      CidrBlock: !Ref PrivateDBSubnet01Cidr
       Tags:
       - Key: Name
-        Value: !Sub ${Environment}-DB-PrivateSubnet
+        Value: !Sub ${Environment}-DB-PrivateSubnet01
+
+  PrivateDBSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PrivateDBSubnet02Cidr
+      Tags:
+      - Key: Name
+        Value: !Sub ${Environment}-DB-PrivateSubnet02
 
 
 Outputs:
@@ -121,7 +138,12 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}::PublicSubnetId
 
-  PrivateDBSubnetId:
-    Value: !Ref PrivateDBSubnet 
+  PrivateDBSubnet01Id:
+    Value: !Ref PrivateDBSubnet01
     Export:
-      Name: !Sub ${AWS::StackName}::PrivateDBSubnetId
+      Name: !Sub ${AWS::StackName}::PrivateDBSubnet01Id
+
+  PrivateDBSubnet02Id:
+    Value: !Ref PrivateDBSubnet02
+    Export:
+      Name: !Sub ${AWS::StackName}::PrivateDBSubnet02Id

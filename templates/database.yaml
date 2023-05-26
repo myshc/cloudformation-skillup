@@ -66,9 +66,9 @@ Parameters:
       - postgres-14.8
       - postgres-15.3
 
-  DBSubnetId:
-    Description: Specify a database subnet id.
-    Type: String 
+  DBSubnetIds:
+    Description: Specify a database subnet ids.
+    Type: List<String>
         
   DBSecurityGroupId:
     Description: Specify a database security group id.
@@ -80,8 +80,7 @@ Resources:
     Type: "AWS::RDS::DBSubnetGroup"
     Properties: 
       DBSubnetGroupDescription: !Sub ${Environment}-Database subnet group
-      SubnetIds: 
-        - !Ref DBSubnetId
+      SubnetIds: !Ref DBSubnetIds
       Tags: 
         - Key: Name
           Value: !Sub ${Environment}-DB-subnet-group
