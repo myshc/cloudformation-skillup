@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create database
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA 
+      - Prod
+
+  DBIdentifier:
+    Description: RDS identifier
+    Type: String
+    Default: database
+    AllowedPattern: '[a-zA-Z0-9\-]*'
+    ConstraintDescription: Must contain only alphanumeric characters and dashes [a-zA-Z0-9\-]
+
+  DBInstanceType:
+    Description: |
+      Choose the database instance type.
+      Default is db.t3.micro.
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t2.micro
+
+  DBMasterUser:
+    Description: Enter a valid Database master username.
+    Type: String
+    Default: admin
+
+  DBMasterPassword:
+    Description: Enter a valid Database master password.
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    MaxLength: 32
+
+  DBStorage:
+    Description: |
+      The amount of database storage in gibibytes (GiB).
+      Default is 20.
+    Type: String
+    Default: 20
+
+  DBEngine:
+    Description: |
+      Select database engine.
+      Default is mysql-8.0.28.
+    Type: String
+    Default: mysql-8.0.28
+    AllowedValues:
+      - mysql-8.0.28
+      - mysql-5.7.42
+      - postgres-11.20
+      - postgres-12.14
+      - postgres-12.14
+      - postgres-13.11
+      - postgres-14.8
+      - postgres-15.3
+
+  DBSubnetId:
+    Description: Specify a database subnet id.
+    Type: String 
+        
+  DBSecurityGroupId:
+    Description: Specify a database security group id.
+    Type: AWS::EC2::SecurityGroup::Id
+
+
+Resources:
+  DatabaseSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: !Sub ${Environment}-Database subnet group
+      SubnetIds: 
+        - !Ref DBSubnetId
+      Tags: 
+        - Key: Name
+          Value: !Sub ${Environment}-DB-subnet-group
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DBStorage
+      DBInstanceIdentifier: !Ref DBIdentifier
+      DBInstanceClass: !Ref DBInstanceType
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      Engine: !Select [0, !Split ['-', !Ref DBEngine]]
+      EngineVersion: !Select [1, !Split ['-', !Ref DBEngine]]
+      MasterUsername: !Ref DBMasterUser
+      MasterUserPassword: !Ref DBMasterPassword
+      MultiAZ: false
+      PubliclyAccessible: false
+      VPCSecurityGroups: [!Ref DBSecurityGroupId]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-DB
+
+
+Outputs:
+  DBEnpoint:
+    Value: !GetAtt Database.Endpoint.Address

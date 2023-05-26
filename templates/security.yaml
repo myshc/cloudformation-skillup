@@ -17,6 +17,13 @@ Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
 
+  DBEngine:
+    Type: String
+
+
+Conditions:
+  IsDBEngineMySQL: !Equals [!Ref DBEngine, mysql]
+
 
 Resources:
   WebSecurityGroup:
@@ -36,6 +43,11 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
           Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: Allow SSH
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -44,9 +56,40 @@ Resources:
         - Key: Name
           Value: !Sub ${Environment}-Web-SG
 
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: !Sub ${Environment} database security group
+      GroupName: !Sub ${Environment}DBSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !If
+            - IsDBEngineMySQL
+            - 3306
+            - 5432
+          ToPort: !If
+            - IsDBEngineMySQL
+            - 3306
+            - 5432
+          SourceSecurityGroupId: !Ref WebSecurityGroup
+          Description: Allow connection to all web sg
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          DestinationSecurityGroupId: !Ref WebSecurityGroup
+          Description: Allow outbound traffic only to web sg 
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-DB-SG
+
 
 Outputs:
   WebSecurityGroupId:
     Value: !Ref WebSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::WebSecurityGroupId
+
+  DBSecurityGroupId:
+    Value: !Ref DBSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::DBSecurityGroupId

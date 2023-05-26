@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create VPC with 1 public subnet 
+Description: Create VPC (1 public subnet, 1 private subnet)
 
 
 Parameters:
@@ -27,6 +27,13 @@ Parameters:
       Default is 192.168.88.16/28
     Type: String
     Default: 192.168.88.16/28 
+
+  PrivateDBSubnetCidr:
+    Description: |
+      Enter private DB subnet CIDR block.
+      Default is 192.168.88.48/28
+    Type: String
+    Default: 192.168.88.48/28 
 
 
 Resources:
@@ -87,6 +94,16 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet 
 
+  PrivateDBSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateDBSubnetCidr
+      Tags:
+      - Key: Name
+        Value: !Sub ${Environment}-DB-PrivateSubnet
+
 
 Outputs:
   VpcId:
@@ -103,3 +120,8 @@ Outputs:
     Value: !Ref PublicSubnet
     Export:
       Name: !Sub ${AWS::StackName}::PublicSubnetId
+
+  PrivateDBSubnetId:
+    Value: !Ref PrivateDBSubnet 
+    Export:
+      Name: !Sub ${AWS::StackName}::PrivateDBSubnetId

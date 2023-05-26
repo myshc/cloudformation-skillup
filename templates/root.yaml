@@ -2,6 +2,38 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Root stack that brings all stacks together.
 
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Environment parameters
+        Parameters:
+          - Environment
+          - TemplatesBucketURL 
+
+      - Label:
+          default: VPC parameters
+        Parameters:
+          - VPCCidr
+          - PublicSubnetCidr
+          - PrivateDBSubnetCidr
+
+      - Label:
+          default: Server parameters
+        Parameters:
+          - InstanceType
+
+      - Label:
+          default: RDS parameters
+        Parameters:
+          - DBIdentifier
+          - DBInstanceType
+          - DBMasterUser
+          - DBMasterPassword
+          - DBStorage
+          - DBEngine
+
+
 Parameters:
   Environment:
     Description: |
@@ -37,6 +69,13 @@ Parameters:
     Type: String
     Default: 192.168.88.16/28 
 
+  PrivateDBSubnetCidr:
+    Description: |
+      Enter private DB subnet CIDR block.
+      Default is 192.168.88.48/28
+    Type: String
+    Default: 192.168.88.48/28 
+
   ##################### Server stack parameters ######################
 
   InstanceType:
@@ -50,6 +89,60 @@ Parameters:
       - t2.micro
       - t3.micro
 
+  ####################### RDS stack parameters #######################
+
+  DBIdentifier:
+    Description: RDS identifier
+    Type: String
+    Default: database
+    AllowedPattern: '[a-zA-Z0-9\-]*'
+    ConstraintDescription: Must contain only alphanumeric characters and dashes [a-zA-Z0-9\-]
+
+  DBInstanceType:
+    Description: |
+      Choose the database instance type.
+      Default is db.t3.micro.
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t2.micro
+
+  DBMasterUser:
+    Description: Enter a valid Database master username.
+    Type: String
+    Default: admin
+
+  DBMasterPassword:
+    Description: Enter a valid Database master password.
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    MaxLength: 32
+
+  DBStorage:
+    Description: |
+      The amount of database storage in gibibytes (GiB).
+      Default is 20.
+    Type: String
+    Default: 20
+
+  DBEngine:
+    Description: |
+      Select database engine.
+      Default is mysql-8.0.28.
+    Type: String
+    Default: mysql-8.0.28
+    AllowedValues:
+      - mysql-8.0.28
+      - mysql-5.7.42
+      - postgres-11.20
+      - postgres-12.14
+      - postgres-12.14
+      - postgres-13.11
+      - postgres-14.8
+      - postgres-15.3
+
 
 Resources:
   VPCStack:
@@ -60,6 +153,7 @@ Resources:
         Environment: !Ref Environment
         VPCCidr: !Ref VPCCidr
         PublicSubnetCidr: !Ref PublicSubnetCidr
+        PrivateDBSubnetCidr: !Ref PrivateDBSubnetCidr
  
   SecurityStack:
     Type: AWS::CloudFormation::Stack
@@ -68,6 +162,7 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         VpcId: !GetAtt VPCStack.Outputs.VpcId
+        DBEngine: !Select [0, !Split ['-', !Ref DBEngine]]
 
   ServerStack:
     Type: AWS::CloudFormation::Stack
@@ -78,3 +173,17 @@ Resources:
         InstanceType: !Ref InstanceType
         PublicSubnetId: !GetAtt VPCStack.Outputs.PublicSubnetId
         WebSecurityGroupId: !GetAtt SecurityStack.Outputs.WebSecurityGroupId
+
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/database.yaml
+      Parameters:
+        DBIdentifier: !Ref DBIdentifier
+        DBInstanceType: !Ref DBInstanceType
+        DBMasterUser: !Ref DBMasterUser
+        DBMasterPassword: !Ref DBMasterPassword
+        DBStorage: !Ref DBStorage
+        DBEngine: !Ref DBEngine
+        DBSubnetId: !GetAtt VPCStack.Outputs.PrivateDBSubnetId
+        DBSecurityGroupId: !GetAtt SecurityStack.Outputs.DBSecurityGroupId
