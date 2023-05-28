@@ -92,3 +92,8 @@ Outputs:
     Value: !GetAtt ApplicationLoadBalancer.DNSName 
     Export:
       Name: !Sub ${AWS::StackName}::ALBDnsName
+
+  ALBCanonicalHostedZoneID:
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBCanonicalHostedZoneID

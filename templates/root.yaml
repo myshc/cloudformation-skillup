@@ -252,3 +252,11 @@ Resources:
             - - !GetAtt VPCStack.Outputs.PrivateDBSubnet01Id
               - !GetAtt VPCStack.Outputs.PrivateDBSubnet02Id
         DBSecurityGroupId: !GetAtt SecurityStack.Outputs.DBSecurityGroupId
+
+  Route53Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/route53.yaml
+      Parameters:
+        ALBDnsName: !GetAtt ALBStack.Outputs.ALBDnsName
+        ALBCanonicalHostedZoneID: !GetAtt ALBStack.Outputs.ALBCanonicalHostedZoneID

@@ -36,12 +36,12 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
-          Description: Allow HTTP
+          SourceSecurityGroupId: !Ref ALBSecurityGroup 
+          Description: Allow HTTP only to ALB
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !Ref ALBSecurityGroup 
           Description: Allow HTTPS
         - IpProtocol: tcp
           FromPort: 22

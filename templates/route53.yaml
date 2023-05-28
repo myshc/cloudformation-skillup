@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: DNS stack 
+
+
+Parameters:
+  ALBDnsName:
+    Description: ALB DNS Name
+    Type: String
+
+  ALBCanonicalHostedZoneID:
+    Description: 
+      The ID of the Route53 hosted zone associated with the load balancer
+    Type: String
+
+
+Resources:
+  MyshCloudZone:
+    Type: AWS::Route53::HostedZone
+    Properties: 
+      Name: mysh.cloud 
+
+  MyshCloudRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref MyshCloudZone
+      RecordSets:
+        - Name: mysh.cloud 
+          Type: A
+          AliasTarget:
+            HostedZoneId: !Ref ALBCanonicalHostedZoneID
+            DNSName: !Ref ALBDnsName 
