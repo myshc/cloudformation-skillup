@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create EC2 instance 
+Description: Create EC2 instances
 
 
 Parameters:
@@ -32,9 +32,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/debian/release/11/latest/amd64
 
-  PublicSubnetId:
-    Description: Enter a valid public subnet id
-    Type: AWS::EC2::Subnet::Id
+  PublicSubnetIds:
+    Description: Enter a valid public subnet ids
+    Type: List<AWS::EC2::Subnet::Id>
 
   WebSecurityGroupId:
     Description: Enter a valid web security group id
@@ -42,15 +42,40 @@ Parameters:
 
 
 Resources:
-  WebInstance:
+  WebInstance01:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType 
       ImageId: !Ref LatestAmiId
       AvailabilityZone: !Select [0, !GetAZs '']
-      SubnetId: !Ref PublicSubnetId
+      SubnetId: !Select [0, !Ref PublicSubnetIds]
       SecurityGroupIds: [!Ref WebSecurityGroupId]
       KeyName: mysh
       Tags:
         - Key: Name
-          Value: !Sub ${Environment}-Web
+          Value: !Sub ${Environment}-Web-01
+
+  WebInstance02:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType 
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: !Select [1, !GetAZs '']
+      SubnetId: !Select [1, !Ref PublicSubnetIds]
+      SecurityGroupIds: [!Ref WebSecurityGroupId]
+      KeyName: mysh
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Web-02
+
+
+Outputs:
+  WebInstance01Id:
+    Value: !Ref WebInstance01
+    Export:
+      Name: !Sub ${AWS::StackName}::WebInstance01Id
+
+  WebInstance02Id:
+    Value: !Ref WebInstance02
+    Export:
+      Name: !Sub ${AWS::StackName}::WebInstance02Id

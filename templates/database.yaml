@@ -87,6 +87,8 @@ Resources:
 
   Database:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       AllocatedStorage: !Ref DBStorage
       DBInstanceIdentifier: !Ref DBIdentifier

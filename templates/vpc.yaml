@@ -21,12 +21,19 @@ Parameters:
     Type: String
     Default: 192.168.88.0/26
 
-  PublicSubnetCidr:
+  PublicSubnet01Cidr:
     Description: |
-      Enter public subnet CIDR block.
+      Enter public subnet 01 CIDR block.
       Default is 192.168.88.0/28
     Type: String
     Default: 192.168.88.0/28 
+
+  PublicSubnet02Cidr:
+    Description: |
+      Enter public subnet 02 CIDR block.
+      Default is 192.168.88.16/28
+    Type: String
+    Default: 192.168.88.16/28 
 
   PrivateDBSubnet01Cidr:
     Description: |
@@ -67,16 +74,29 @@ Resources:
       VpcId: !Ref VPC 
       InternetGatewayId: !Ref InternetGateway 
 
-  PublicSubnet:
+  ####################### public subnets #######################
+
+  PublicSubnet01:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: !Ref PublicSubnetCidr
+      CidrBlock: !Ref PublicSubnet01Cidr
       MapPublicIpOnLaunch: true
       Tags:
       - Key: Name
-        Value: !Sub ${Environment}-PublicSubnet
+        Value: !Sub ${Environment}-PublicSubnet01
+
+  PublicSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet02Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub ${Environment}-PublicSubnet02
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -95,11 +115,19 @@ Resources:
     DependsOn:
       - VPCGatewayAttachment
 
-  PublicSubnetRouteTableAssociation:
+  PublicSubnetRouteTableAssociation01:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties: 
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet 
+      SubnetId: !Ref PublicSubnet01
+
+  PublicSubnetRouteTableAssociation02:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet02
+
+  ####################### private subnets #######################
 
   PrivateDBSubnet01:
     Type: AWS::EC2::Subnet
@@ -133,10 +161,15 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}::VpcCidr
 
-  PublicSubnetId:
-    Value: !Ref PublicSubnet
+  PublicSubnet01Id:
+    Value: !Ref PublicSubnet01
     Export:
-      Name: !Sub ${AWS::StackName}::PublicSubnetId
+      Name: !Sub ${AWS::StackName}::PublicSubnet01Id
+
+  PublicSubnet02Id:
+    Value: !Ref PublicSubnet02
+    Export:
+      Name: !Sub ${AWS::StackName}::PublicSubnet02Id
 
   PrivateDBSubnet01Id:
     Value: !Ref PrivateDBSubnet01

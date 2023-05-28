@@ -56,6 +56,22 @@ Resources:
         - Key: Name
           Value: !Sub ${Environment}-Web-SG
 
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: !Sub ${Environment} application load balancer security group
+      GroupName: !Sub ${Environment}ALBSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ALB-SG
+
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -88,6 +104,11 @@ Outputs:
     Value: !Ref WebSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::WebSecurityGroupId
+
+  ALBSecurityGroupId:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBSecurityGroupId
 
   DBSecurityGroupId:
     Value: !Ref DBSecurityGroup

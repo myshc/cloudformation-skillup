@@ -15,7 +15,8 @@ Metadata:
           default: VPC parameters
         Parameters:
           - VPCCidr
-          - PublicSubnetCidr
+          - PublicSubnet01Cidr
+          - PublicSubnet02Cidr
           - PrivateDBSubnet01Cidr
           - PrivateDBSubnet02Cidr
 
@@ -33,6 +34,12 @@ Metadata:
           - DBMasterPassword
           - DBStorage
           - DBEngine
+
+      - Label:
+          default: ALB parameters
+        Parameters:
+          - ALBName
+          - TargtGroupHealthCheckPath
 
 
 Parameters:
@@ -63,12 +70,19 @@ Parameters:
     Type: String
     Default: 192.168.88.0/26
 
-  PublicSubnetCidr:
+  PublicSubnet01Cidr:
     Description: |
       Enter public subnet CIDR block.
       Default is 192.168.88.0/28
     Type: String
     Default: 192.168.88.0/28 
+
+  PublicSubnet02Cidr:
+    Description: |
+      Enter public subnet CIDR block.
+      Default is 192.168.88.16/28
+    Type: String
+    Default: 192.168.88.16/28 
 
   PrivateDBSubnet01Cidr:
     Description: |
@@ -96,6 +110,17 @@ Parameters:
       - t4g.small
       - t2.micro
       - t3.micro
+
+  ####################### ALB stack parameters #######################
+
+  ALBName:
+    Description: Enter an aplication load balancer name. 
+    Type: String
+
+  TargtGroupHealthCheckPath:
+    Description: Path of health check. Default is "/"
+    Type: String
+    Default: '/'
 
   ####################### RDS stack parameters #######################
 
@@ -160,7 +185,8 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         VPCCidr: !Ref VPCCidr
-        PublicSubnetCidr: !Ref PublicSubnetCidr
+        PublicSubnet01Cidr: !Ref PublicSubnet01Cidr
+        PublicSubnet02Cidr: !Ref PublicSubnet02Cidr
         PrivateDBSubnet01Cidr: !Ref PrivateDBSubnet01Cidr
         PrivateDBSubnet02Cidr: !Ref PrivateDBSubnet02Cidr
  
@@ -180,11 +206,37 @@ Resources:
       Parameters:
         Environment: !Ref Environment
         InstanceType: !Ref InstanceType
-        PublicSubnetId: !GetAtt VPCStack.Outputs.PublicSubnetId
+        PublicSubnetIds: 
+          Fn::Join:
+            - ','
+            - - !GetAtt VPCStack.Outputs.PublicSubnet01Id
+              - !GetAtt VPCStack.Outputs.PublicSubnet02Id
         WebSecurityGroupId: !GetAtt SecurityStack.Outputs.WebSecurityGroupId
+
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${TemplatesBucketURL}/alb.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ALBName: !Ref ALBName
+        ALBSecurityGroup: !GetAtt SecurityStack.Outputs.ALBSecurityGroupId
+        ALBPublicSubnetIds:
+          Fn::Join:
+            - ','
+            - - !GetAtt VPCStack.Outputs.PublicSubnet01Id
+              - !GetAtt VPCStack.Outputs.PublicSubnet02Id
+        TargtGroupHealthCheckPath: !Ref TargtGroupHealthCheckPath
+        TargetGroupVpcId: !GetAtt VPCStack.Outputs.VpcId
+        TargetInstanceIds:
+          Fn::Join:
+            - ','
+            - - !GetAtt ServerStack.Outputs.WebInstance01Id
+              - !GetAtt ServerStack.Outputs.WebInstance02Id
 
   DatabaseStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: ALBStack
     Properties:
       TemplateURL: !Sub ${TemplatesBucketURL}/database.yaml
       Parameters:

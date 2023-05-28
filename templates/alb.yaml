@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ALB stack
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  ALBName:
+    Description: Enter an aplication load balancer name. 
+    Type: String
+
+  ALBSecurityGroup:
+    Description: Enter an appliction load balancer security group id
+    Type: AWS::EC2::SecurityGroup::Id
+
+  ALBPublicSubnetIds:
+    Description: Enter a valid public subnet ids
+    Type: List<AWS::EC2::Subnet::Id>
+
+  TargtGroupHealthCheckPath:
+    Description: Path of health check. Default is "/"
+    Type: String
+    Default: '/'
+
+  TargetGroupVpcId:
+    Type: AWS::EC2::VPC::Id
+
+  TargetInstanceIds:
+    Type: List<String>
+
+
+Resources:
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Type: application
+      IpAddressType: ipv4
+      Name: !Ref ALBName
+      Scheme: internet-facing 
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Subnets: !Ref ALBPublicSubnetIds
+      Tags: 
+        - Key: Name
+          Value: !Sub ${Environment}-ALB
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref TargtGroupHealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200-299
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref TargetGroupVpcId
+      TargetType: instance
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 20
+      Targets:
+        - Id: !Select [0, !Ref TargetInstanceIds]
+          Port: 80
+        - Id: !Select [1, !Ref TargetInstanceIds]
+          Port: 80
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+
+Outputs:
+  ALBDnsName:
+    Value: !GetAtt ApplicationLoadBalancer.DNSName 
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBDnsName
