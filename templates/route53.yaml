@@ -29,3 +29,15 @@ Resources:
           AliasTarget:
             HostedZoneId: !Ref ALBCanonicalHostedZoneID
             DNSName: !Ref ALBDnsName 
+
+  MyshCloudCertificate: 
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: mysh.cloud 
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: mysh.cloud
+          HostedZoneId: !Ref MyshCloudZone
+      Tags:
+        - Key: Name
+          Value: mysh.cloud-certificate
