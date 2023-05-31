@@ -53,10 +53,8 @@ Parameters:
 
   ALBHostedZoneId:
     Description: |
-      Enter a dns zone id. E.g. Z07311111111111111U5I.
-      You can find it using the command
-      "aws route53 list-hosted-zones | grep -E '(Name|Id)'"
-    Type: String
+      Select a dns zone ids. 
+    Type: AWS::Route53::HostedZone::Id
 
   ALBDomainName:
     Description: Enter a domain name for ALB.
@@ -69,7 +67,7 @@ Parameters:
 
   TargetInstanceIds:
     Description: List of the target instance ids.
-    Type: List<String>
+    Type: List<AWS::EC2::Instance::Id>
 
   TargtGroupHealthCheckPath:
     Description: Path of health check. Default is "/".
