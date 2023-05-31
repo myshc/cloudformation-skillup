@@ -2,9 +2,21 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: DNS stack 
 
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: ALB alias configuration 
+        Parameters:
+          - ALBDnsName
+          - ALBCanonicalHostedZoneID
+          - ALBHostedZoneId
+          - ALBDomainName
+
+
 Parameters:
   ALBDnsName:
-    Description: ALB DNS Name
+    Description: ALB AWS DNS Name
     Type: String
 
   ALBCanonicalHostedZoneID:
@@ -15,7 +27,8 @@ Parameters:
   ALBHostedZoneId:
     Description: |
       Enter a dns zone id. E.g. Z07311111111111111U5I.
-      You can find it using the command "aws route53 list-hosted-zones"
+      You can find it using the command
+      "aws route53 list-hosted-zones | grep -E '(Name|Id)'"
     Type: String
 
   ALBDomainName:

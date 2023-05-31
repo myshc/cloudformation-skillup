@@ -1,6 +1,39 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create VPC (1 public subnet, 1 private subnet)
+Description: VPC stack (2 public subnets, 2 private subnets)
 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+          - VPCCidr
+
+      - Label:
+          default: Public subnet 01
+        Parameters:
+          - PublicSubnet01Cidr
+          - PublicSubnet01AZ
+
+      - Label:
+          default: Public subnet 02
+        Parameters:
+          - PublicSubnet02Cidr
+          - PublicSubnet02AZ
+
+      - Label:
+          default: Private subnet 01
+        Parameters:
+          - PrivateSubnet01Cidr
+          - PrivateSubnet01AZ
+
+      - Label:
+          default: Private subnet 02
+        Parameters:
+          - PrivateSubnet02Cidr
+          - PrivateSubnet02AZ
 
 Parameters:
   Environment:
@@ -28,6 +61,9 @@ Parameters:
     Type: String
     Default: 192.168.88.0/28 
 
+  PublicSubnet01AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+
   PublicSubnet02Cidr:
     Description: |
       Enter public subnet 02 CIDR block.
@@ -35,19 +71,28 @@ Parameters:
     Type: String
     Default: 192.168.88.16/28 
 
-  PrivateDBSubnet01Cidr:
+  PublicSubnet02AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  PrivateSubnet01Cidr:
     Description: |
       Enter private DB subnet CIDR block.
       Default is 192.168.88.32/28
     Type: String
     Default: 192.168.88.32/28 
 
-  PrivateDBSubnet02Cidr:
+  PrivateSubnet01AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  PrivateSubnet02Cidr:
     Description: |
       Enter private DB subnet CIDR block.
       Default is 192.168.88.48/28
     Type: String
     Default: 192.168.88.48/28 
+
+  PrivateSubnet02AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
 
 
 Resources:
@@ -80,7 +125,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone: !Ref PublicSubnet01AZ
       CidrBlock: !Ref PublicSubnet01Cidr
       MapPublicIpOnLaunch: true
       Tags:
@@ -91,7 +136,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone: !Ref PublicSubnet02AZ
       CidrBlock: !Ref PublicSubnet02Cidr
       MapPublicIpOnLaunch: true
       Tags:
@@ -129,25 +174,25 @@ Resources:
 
   ####################### private subnets #######################
 
-  PrivateDBSubnet01:
+  PrivateSubnet01:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: !Ref PrivateDBSubnet01Cidr
+      AvailabilityZone: !Ref PrivateSubnet01AZ
+      CidrBlock: !Ref PrivateSubnet01Cidr
       Tags:
       - Key: Name
-        Value: !Sub ${Environment}-DB-PrivateSubnet01
+        Value: !Sub ${Environment}-PrivateSubnet01
 
-  PrivateDBSubnet02:
+  PrivateSubnet02:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [1, !GetAZs '']
-      CidrBlock: !Ref PrivateDBSubnet02Cidr
+      AvailabilityZone: !Ref PrivateSubnet02AZ
+      CidrBlock: !Ref PrivateSubnet02Cidr
       Tags:
       - Key: Name
-        Value: !Sub ${Environment}-DB-PrivateSubnet02
+        Value: !Sub ${Environment}-PrivateSubnet02
 
 
 Outputs:
@@ -161,22 +206,18 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}::VpcCidr
 
-  PublicSubnet01Id:
-    Value: !Ref PublicSubnet01
+  PublicSubnetIds:
+    Value: !Join 
+      - ','
+      - - !Ref PublicSubnet01
+        - !Ref PublicSubnet02
     Export:
-      Name: !Sub ${AWS::StackName}::PublicSubnet01Id
+      Name: !Sub ${AWS::StackName}::PublicSubnetIds
 
-  PublicSubnet02Id:
-    Value: !Ref PublicSubnet02
+  PrivateSubnetIds:
+    Value: !Join 
+      - ','
+      - - !Ref PrivateSubnet01
+        - !Ref PrivateSubnet02
     Export:
-      Name: !Sub ${AWS::StackName}::PublicSubnet02Id
-
-  PrivateDBSubnet01Id:
-    Value: !Ref PrivateDBSubnet01
-    Export:
-      Name: !Sub ${AWS::StackName}::PrivateDBSubnet01Id
-
-  PrivateDBSubnet02Id:
-    Value: !Ref PrivateDBSubnet02
-    Export:
-      Name: !Sub ${AWS::StackName}::PrivateDBSubnet02Id
+      Name: !Sub ${AWS::StackName}::PrivateSubnetIds

@@ -1,12 +1,26 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create Secutiry Group
+Description: Secutiry Groups stack (Web instances, ALB, DB, Jenkins)
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+          - VpcId
+
+      - Label:
+          default: Security group rules configuration 
+        Parameters:
+          - DBEngine 
+          - JumpHostIp 
 
 
 Parameters:
   Environment:
-    Description: |
-      Choose the environment.
-      Default is Dev.
+    Description: Choose the environment.
     Type: String
     Default: Dev
     AllowedValues:
@@ -14,11 +28,22 @@ Parameters:
       - QA
       - Prod
 
+  DBEngine:
+    Description: Select database engine.
+    Type: String
+    Default: mysql
+    AllowedValues:
+      - mysql
+      - postgres
+
   VpcId:
+    Description: Select a vpc. 
     Type: AWS::EC2::VPC::Id
 
-  DBEngine:
+  JumpHostIp:
+    Description: Enter jumphost ip address for jenkins access.
     Type: String
+    Default: 0.0.0.0/0
 
 
 Conditions:
@@ -103,6 +128,36 @@ Resources:
         - Key: Name
           Value: !Sub ${Environment}-DB-SG
 
+  JenkinsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: !Sub ${Environment} Jenkins server security group
+      GroupName: !Sub ${Environment}JenkinsSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref JumpHostIp
+          Description: Allow HTTP only to my home ip
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref JumpHostIp
+          Description: Allow HTTPS only to my home ip
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: Allow SSH
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow outbound traffic to all destinations
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Jenkins-SG
+
 
 Outputs:
   WebSecurityGroupId:
@@ -119,3 +174,8 @@ Outputs:
     Value: !Ref DBSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::DBSecurityGroupId
+
+  JenkinsSecurityGroupId:
+    Value: !Ref JenkinsSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::JenkinsSecurityGroupId

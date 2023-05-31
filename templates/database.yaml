@@ -1,5 +1,30 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create database
+Description: Database stack
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+          - DBIdentifier
+          - DBInstanceType
+          - DBStorage
+          - DBEngine
+
+      - Label:
+          default: Database networking configuration 
+        Parameters:
+          - DBSubnetIds
+          - DBSecurityGroupId
+
+      - Label:
+          default: Database credentials configuration 
+        Parameters:
+          - DBMasterUser
+          - DBMasterPassword
 
 
 Parameters:
@@ -68,7 +93,7 @@ Parameters:
 
   DBSubnetIds:
     Description: Specify a database subnet ids.
-    Type: List<String>
+    Type: List<AWS::EC2::Subnet::Id>
         
   DBSecurityGroupId:
     Description: Specify a database security group id.

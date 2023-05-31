@@ -2,6 +2,31 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: ALB stack
 
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
+          default: ALB configuration 
+        Parameters:
+          - ALBName
+          - ALBSecurityGroup
+          - ALBPublicSubnetIds
+          - ALBHostedZoneId
+          - ALBDomainName
+
+      - Label:
+          default: Target configuration 
+        Parameters:
+          - TargetGroupVpcId
+          - TargetInstanceIds
+          - TargtGroupHealthCheckPath
+
+
 Parameters:
   Environment:
     Description: |
@@ -15,11 +40,11 @@ Parameters:
       - Prod
 
   ALBName:
-    Description: Enter an aplication load balancer name. 
+    Description: Enter aplication load balancer name. 
     Type: String
 
   ALBSecurityGroup:
-    Description: Enter an appliction load balancer security group id
+    Description: Select appliction load balancer security group id
     Type: AWS::EC2::SecurityGroup::Id
 
   ALBPublicSubnetIds:
@@ -28,8 +53,9 @@ Parameters:
 
   ALBHostedZoneId:
     Description: |
-      Enter a dns zone id. E.g. Z07311111111111111U5I
-      You can find it using the command "aws route53 list-hosted-zones"
+      Enter a dns zone id. E.g. Z07311111111111111U5I.
+      You can find it using the command
+      "aws route53 list-hosted-zones | grep -E '(Name|Id)'"
     Type: String
 
   ALBDomainName:
@@ -37,16 +63,19 @@ Parameters:
     Type: String
     Default: mysh.cloud
 
-  TargtGroupHealthCheckPath:
-    Description: Path of health check. Default is "/"
-    Type: String
-    Default: '/'
-
   TargetGroupVpcId:
+    Description: Select a target vpc. 
     Type: AWS::EC2::VPC::Id
 
   TargetInstanceIds:
+    Description: List of the target instance ids.
     Type: List<String>
+
+  TargtGroupHealthCheckPath:
+    Description: Path of health check. Default is "/".
+    Type: String
+    Default: '/'
+
 
 Resources:
   ApplicationLoadBalancer:
@@ -113,9 +142,9 @@ Resources:
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref MyshCloudCertificate
+        - CertificateArn: !Ref ALBListenerCertificate
 
-  MyshCloudCertificate: 
+  ALBListenerCertificate: 
     Type: AWS::CertificateManager::Certificate
     Properties: 
       DomainName: !Ref ALBDomainName 
@@ -125,7 +154,7 @@ Resources:
           HostedZoneId: !Ref ALBHostedZoneId
       Tags:
         - Key: Name
-          Value: !Sub ${ALBDomainName}-certificate
+          Value: !Sub ${ALBDomainName}-Certificate
 
 
 Outputs:
