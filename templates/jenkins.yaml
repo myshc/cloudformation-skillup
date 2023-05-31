@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Jenkins servers
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
+          default: Instance networking
+        Parameters:
+          - JenkinsPublicSubnetIds
+          - JenkinsSecurityGroupIds
+          - JenkinsAvailabilityZones
+
+      - Label:
+          default: Instance configuration 
+        Parameters:
+          - LatestAmiId
+          - JenkinsInstanceType
+          - JenkinsKeyPair
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  LatestAmiId:
+    Description: |
+      Enter SSM Parameter for AMI.
+      Default is /aws/service/debian/release/11/latest/amd64
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/debian/release/11/latest/amd64
+
+  JenkinsInstanceType:
+    Description: |
+      Select EC2 instance type for Jenkins.
+      Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
+  JenkinsKeyPair:
+    Description: EC2 Key Pair to access the server
+    Type: AWS::EC2::KeyPair::KeyName
+
+  JenkinsPublicSubnetIds:
+    Description: Enter a public subnet ids.
+    Type: List<AWS::EC2::Subnet::Id>
+
+  JenkinsSecurityGroupIds:
+    Description: Enter a valid web security group id.
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  JenkinsAvailabilityZones:
+    Description: Enter a public subnet availability zones in the same order.
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+
+
+Resources:
+  JenkinsInstance01:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref JenkinsInstanceType 
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: !Select [0, !Ref JenkinsAvailabilityZones]
+      SubnetId: !Select [0, !Ref JenkinsPublicSubnetIds]
+      SecurityGroupIds: !Ref JenkinsSecurityGroupIds
+      KeyName: !Ref JenkinsKeyPair
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+            /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+          echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+            https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+            /etc/apt/sources.list.d/jenkins.list > /dev/null
+          sudo apt-get update -y
+          sudo apt-get install openjdk-11-jre -y
+          sudo apt-get install jenkins -y
+          sudo apt-get install nginx -y
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Jenkins-01
+
+
+Outputs:
+  JenkinsInstance01Id:
+    Value: !Ref JenkinsInstance01
+    Export:
+      Name: !Sub ${AWS::StackName}::JenkinsInstance01Id
+
+  JenkinsInstance01PublicIp:
+    Value: !GetAtt JenkinsInstance01.PublicIp
+    Export:
+      Name: !Sub ${AWS::StackName}::JenkinsInstance01PublicIp
