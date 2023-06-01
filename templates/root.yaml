@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Root stack that brings all stacks together.
 
+############################################ 
+#      THE TAMPLATE MAY BE OUTDATED!       #
+#                                          #
+#  Not using this template at the moment.  #
+#  Left it as an example.                  #
+############################################
 
 Metadata:
   AWS::CloudFormation::Interface:
