@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECR repository
+
+
+Parameters:
+  ImageTagMutability:
+    Description: IMMUTABLE | MUTABLE
+    Default: MUTABLE
+    Type: String
+    AllowedValues:
+      - IMMUTABLE
+      - MUTABLE
+
+  ImageScanOnPush:
+    Default: false 
+    Type: String
+    AllowedValues:
+      - true 
+      - false
+
+  RepositoryName:
+    Type: String
+    Default: spring-books-api
+
+
+Resources:
+  Repository: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: !Ref RepositoryName
+      ImageTagMutability: !Ref ImageTagMutability
+      ImageScanningConfiguration:
+        ScanOnPush: !Ref ImageScanOnPush
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep only one untagged image, expire all others",
+                "selection": {
+                  "tagStatus": "untagged",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 1
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+
+
+Outputs:
+  RepositoryName:
+    Value: !Ref Repository
+    Export:
+      Name: !Sub ${AWS::StackName}::RepositoryName
+
+  RepositoryArn:
+    Value: !GetAtt Repository.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::RepositoryArn
+
+  RepositoryUri:
+    Value: !GetAtt Repository.RepositoryUri
+    Export:
+      Name: !Sub ${AWS::StackName}::RepositoryUri

@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS cluster, task definition, service, logs, iam role
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Cluster configuration 
+        Parameters:
+          - ClusterName 
+
+      - Label:
+          default: Task configuration 
+        Parameters:
+          - RepositoryUri
+          - DBSecretArn
+          - ImageTag
+          - SsmDBName
+
+      - Label:
+          default: Service configuration 
+        Parameters:
+          - SubnetA
+          - SubnetB
+          - SecurityGroup
+
+
+Parameters:
+  ImageTag:
+    Default: 0.0.1
+    Type: String
+
+  RepositoryName:
+    Type: String
+    Default: spring-books-api
+
+  ClusterName:
+    Type: String
+    Default: skillup-cluster
+
+  RepositoryUri:
+    Type: String
+    Description: 426711337666.dkr.ecr.eu-central-1.amazonaws.com/spring-books-api
+
+  DBSecretArn:
+    Type: String
+
+  SsmDBName:
+    Type: String
+
+  SubnetA:
+    Type: AWS::EC2::Subnet::Id
+
+  SubnetB:
+    Type: AWS::EC2::Subnet::Id
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName 
+      CapacityProviders: [FARGATE, FARGATE_SPOT]
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 512
+      Memory: 1024 
+      ExecutionRoleArn: !Ref ExecutionRole
+      ContainerDefinitions:
+        - Name: !Ref RepositoryName
+          Image:  !Join [':', [!Ref RepositoryUri, !Ref ImageTag]]
+          Cpu: 0
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: ecs
+          Secrets:
+            - Name: DB_USERNAME
+              ValueFrom: !Sub '${DBSecretArn}:username::'
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub '${DBSecretArn}:password::'
+            - Name: DB_HOST 
+              ValueFrom: !Sub '${DBSecretArn}:host::'
+            - Name: DB_PORT
+              ValueFrom: !Sub '${DBSecretArn}:port::'
+            - Name: DB_NAME
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmDBName}
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/ecs/, !Ref RepositoryName, TaskDefinition]]
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ClusterName, ExecutionRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: secrets-ro-policy
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "secretsmanager:GetRandomPassword"
+                  - "secretsmanager:GetResourcePolicy"
+                  - "secretsmanager:GetSecretValue"
+                  - "secretsmanager:DescribeSecret"
+                  - "secretsmanager:ListSecretVersionIds"
+                  - "secretsmanager:ListSecrets"
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+        - PolicyName: ssm-ro-policy
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "ssm:GetParameters"
+                  - "ssm:GetParameter"
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties: 
+      ServiceName: !Ref ClusterName
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref SubnetA
+            - !Ref SubnetB
+          SecurityGroups:
+            - !Ref SecurityGroup
