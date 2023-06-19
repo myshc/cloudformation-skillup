@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS books (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  book_name VARCHAR(255),
+  end_time DATETIME
+);
