@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Prometheus, Grafana servers
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
+          default: Instance networking
+        Parameters:
+          - PublicSubnetIds
+          - SecurityGroupIds
+          - AvailabilityZones
+
+      - Label:
+          default: Instance configuration 
+        Parameters:
+          - LatestAmiId
+          - InstanceType
+          - KeyPair
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  LatestAmiId:
+    Description: |
+      Enter SSM Parameter for AMI.
+      Default is /aws/service/debian/release/11/latest/amd64
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/debian/release/11/latest/amd64
+
+  InstanceType:
+    Description: |
+      Select EC2 instance type for Jenkins.
+      Default is t2.micro.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t4g.small
+      - t2.micro
+      - t3.micro
+
+  KeyPair:
+    Description: EC2 Key Pair to access the server
+    Type: AWS::EC2::KeyPair::KeyName
+
+  PublicSubnetIds:
+    Description: Enter a public subnet ids.
+    Type: List<AWS::EC2::Subnet::Id>
+
+  SecurityGroupIds:
+    Description: Enter a valid web security group id.
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  AvailabilityZones:
+    Description: Enter a public subnet availability zones in the same order.
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+
+
+Resources:
+  PrometheusInstance01:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType 
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: !Select [0, !Ref AvailabilityZones]
+      SubnetId: !Select [0, !Ref PublicSubnetIds]
+      SecurityGroupIds: !Ref SecurityGroupIds
+      KeyName: !Ref KeyPair
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          apt update
+          apt upgrade
+          apt install -y prometheus apt-transport-https software-properties-common wget
+          wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
+          echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+          apt update
+          apt install grafana
+          systemctl start prometheus && systemctl enable prometheus
+          systemctl start grafana-server && systemctl enable grafana-server
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Prometheus-01
