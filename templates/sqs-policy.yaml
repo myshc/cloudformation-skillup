@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: SQS policy
+
+Parameters:
+  QueueUrls:
+    Type: List<String>
+
+  QueueArns:
+    Type: List<String>
+
+  SourceSNSTopicArn:
+    Type: String
+
+
+Resources:
+  SQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: !Ref QueueUrls
+      PolicyDocument:
+        Id: AllowIncomingAccess
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+            Resource: !Ref QueueArns
+          -
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - sqs:SendMessage
+            Resource: !Ref QueueArns
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SourceSNSTopicArn
+
