@@ -36,7 +36,7 @@ exports.lambda_handler = async (event, context) => {
     const resource = event.resource;
     const request_body = http_method !== 'GET' ? JSON.parse(event.body) : null;
     
-    if (http_method === 'GET' && resource === '/books') {
+    if (http_method === 'GET' && resource === '/book') {
       return get_books();
     } else if (http_method === 'POST' && resource === '/book') {
       return add_book(request_body);

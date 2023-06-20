@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: API Gateway
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  BooksApiFunctionArn:
+    Description: Lambda function arn
+    Type: String
+
+  BookApiStageName:
+    Default: api
+    Type: String
+
+
+Resources:
+  BooksApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub ${Environment}-BooksAPI
+
+  BooksApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn:
+      - BooksApiGatewayMethodGet
+      - BooksApiGatewayMethodPost
+      - BooksApiGatewayMethodPatch
+      - BooksApiGatewayMethodDelete
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      Description: BooksAPI Deployment 
+      StageName: !Ref BookApiStageName
+
+  BooksApiUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    Properties:
+      ApiStages:
+        - ApiId: !Ref BooksApiGateway
+          Stage: !Ref BookApiStageName
+      Quota:
+        Limit: 100
+        Period: DAY
+      Throttle:
+        BurstLimit: 100
+        RateLimit: 50
+      UsagePlanName: !Sub ${Environment}-BooksAPI-UsagePlan
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BooksApiFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksApiGateway}/*/*/book"
+
+  BooksApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      ParentId: !GetAtt BooksApiGateway.RootResourceId
+      PathPart: book
+
+  BooksApiGatewayMethodGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      ResourceId: !Ref BooksApiResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BooksApiFunctionArn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: 
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+
+  BooksApiGatewayMethodPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      ResourceId: !Ref BooksApiResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BooksApiFunctionArn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: 
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+
+  BooksApiGatewayMethodPatch:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      ResourceId: !Ref BooksApiResource
+      HttpMethod: PATCH
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BooksApiFunctionArn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: 
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+
+  BooksApiGatewayMethodDelete:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksApiGateway
+      ResourceId: !Ref BooksApiResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BooksApiFunctionArn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: 
+              method.response.header.Access-Control-Allow-Origin: "'*'"

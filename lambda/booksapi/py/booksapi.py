@@ -36,7 +36,7 @@ def lambda_handler(event, context):
   except Exception as err:
     return response(500, {'error': str(err)})
 
-  if http_method == 'GET' and resource == '/books':
+  if http_method == 'GET' and resource == '/book':
     return get_books()
   elif http_method == 'POST' and resource == '/book':
     return add_book(request_body)
