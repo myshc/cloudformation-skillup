@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lambda functions 
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Runtime 
+          - S3BucketName
+          - FunctionZip
+          - FunctionName
+          - FunctionHandler
+
+      - Label:
+          default: Secrets configuration 
+        Parameters:
+          - DBNameSsmKey
+          - DBSecretName
+
+
+Parameters:
+  Runtime:
+    Description: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html 
+    Default: python3.10
+    Type: String
+
+  S3BucketName:
+    Description: S3 Bucket with lambda functions
+    Default: mysh-cloudformation-skillup
+    Type: String
+
+  FunctionZip:
+    Description: Lambda function zip file path
+    Default: booksapi.zip
+    Type: String
+
+  FunctionName:
+    Description: Lambda function name
+    Default: booksapi
+    Type: String
+
+  FunctionHandler:
+    Default: booksapi.lambda_handler
+    Type: String
+
+  DBName:
+    Description: a database name
+    Type: String 
+
+  DBSecretName:
+    Description: The name of a database secrets
+    Type: String
+
+
+Resources:
+  BooksApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Runtime: !Ref Runtime 
+      Handler: !Ref FunctionHandler
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: 256
+      Timeout: 15
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref FunctionZip
+      Environment:
+        Variables:
+          DB_NAME: !Ref DBName
+          DB_USER: !Sub "{{resolve:secretsmanager:${DBSecretName}:SecretString:username}}"
+          DB_PASS: !Sub "{{resolve:secretsmanager:${DBSecretName}:SecretString:password}}"
+          DB_HOST: !Sub "{{resolve:secretsmanager:${DBSecretName}:SecretString:host}}"
+          DB_PORT: !Sub "{{resolve:secretsmanager:${DBSecretName}:SecretString:port}}"
+
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+
+
+Outputs:
+  LambdaFunctionName:
+    Value: !Ref BooksApiFunction
+    Export:
+      Name: !Sub ${AWS::StackName}::LambdaFunctionName
+
+  LambdaFunctionArn:
+    Value: !GetAtt BooksApiFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::LambdaFunctionArn
