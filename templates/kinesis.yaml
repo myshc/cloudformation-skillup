@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Kinesis Firehouse Delivery Stream
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  S3Bucket:
+    Type: String
+
+
+Resources:
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FirehoseRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FirehosePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - !Sub arn:aws:s3:::${S3Bucket}
+                  - !Sub arn:aws:s3:::${S3Bucket}/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:*:*:log-group:/aws/kinesisfirehose/${Environment}-log-group:log-stream:delivery-log-stream
+
+  FirehoseDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: DeliveryStream
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub arn:aws:s3:::${S3Bucket}
+        RoleARN: !GetAtt FirehoseRole.Arn
+        Prefix: raw/
+        ErrorOutputPrefix: error/
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: UNCOMPRESSED
+        DataFormatConversionConfiguration:
+          Enabled: false
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Ref LogGroup
+          LogStreamName: delivery-log-stream
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/kinesisfirehose/${Environment}-log-group
+
+  LogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref LogGroup
+      LogStreamName: delivery-log-stream
+
+
+Outputs:
+  FirehoseDeliveryStreamName:
+    Value: !Ref FirehoseDeliveryStream
+    Export:
+      Name: !Sub ${AWS::StackName}::FirehoseDeliveryStreamName
+
+  FirehoseDeliveryStreamArn:
+    Value: !GetAtt FirehoseDeliveryStream.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::FirehoseDeliveryStreamArn
