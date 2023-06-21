@@ -1,0 +1,3 @@
+[submodule "spring-books-api"]
+	path = spring-books-api
+	url = git@github.com:myshc/spring-books-api.git
