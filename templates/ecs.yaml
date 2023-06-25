@@ -17,6 +17,7 @@ Metadata:
           - DBSecretArn
           - ImageTag
           - SsmDBName
+          - ContainerPort 
 
       - Label:
           default: Service configuration 
@@ -24,6 +25,7 @@ Metadata:
           - SubnetA
           - SubnetB
           - SecurityGroup
+          - TargetGroupArn
 
 
 Parameters:
@@ -49,6 +51,9 @@ Parameters:
   SsmDBName:
     Type: String
 
+  ContainerPort:
+    Type: Number 
+
   SubnetA:
     Type: AWS::EC2::Subnet::Id
 
@@ -58,6 +63,8 @@ Parameters:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
 
+  TargetGroupArn:
+    Type: String
 
 Resources:
   Cluster:
@@ -81,7 +88,7 @@ Resources:
           Cpu: 0
           Essential: true
           PortMappings:
-            - ContainerPort: 8080
+            - ContainerPort: !Ref ContainerPort
               Protocol: tcp
           LogConfiguration:
             LogDriver: awslogs
@@ -151,7 +158,7 @@ Resources:
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       NetworkConfiguration: 
         AwsvpcConfiguration:
@@ -161,3 +168,7 @@ Resources:
             - !Ref SubnetB
           SecurityGroups:
             - !Ref SecurityGroup
+      LoadBalancers:
+        - ContainerName: !Ref RepositoryName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroupArn

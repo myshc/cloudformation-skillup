@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS ALB stack
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
+          default: ALB configuration 
+        Parameters:
+          - ALBName
+          - ALBSecurityGroup
+          - ALBPublicSubnetIds
+          - ALBHostedZoneId
+          - ALBDomainName
+
+      - Label:
+          default: Target configuration 
+        Parameters:
+          - TargetGroupVpcId
+          - TargtGroupHealthCheckPath
+          - ContainerPort
+
+
+Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+      Default is Dev.
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - QA
+      - Prod
+
+  ALBName:
+    Description: Enter aplication load balancer name. 
+    Type: String
+
+  ALBSecurityGroup:
+    Description: Select appliction load balancer security group id
+    Type: AWS::EC2::SecurityGroup::Id
+
+  ALBPublicSubnetIds:
+    Description: Enter a valid public subnet ids
+    Type: List<AWS::EC2::Subnet::Id>
+
+  ALBHostedZoneId:
+    Description: Select a dns zone id. 
+    Type: AWS::Route53::HostedZone::Id
+
+  ALBDomainName:
+    Description: Enter a domain name for ALB.
+    Type: String
+    Default: mysh.cloud
+
+  TargetGroupVpcId:
+    Description: Select a target vpc. 
+    Type: AWS::EC2::VPC::Id
+
+  TargtGroupHealthCheckPath:
+    Description: Path of health check.
+    Type: String
+    Default: '/books'
+
+  ContainerPort:
+    Description: Application port in container.
+    Type: String
+    Default: 8080
+
+
+Resources:
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Type: application
+      IpAddressType: ipv4
+      Name: !Ref ALBName
+      Scheme: internet-facing 
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Subnets: !Ref ALBPublicSubnetIds
+      Tags: 
+        - Key: Name
+          Value: !Sub ${Environment}-ALB
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref TargtGroupHealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200-299
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      VpcId: !Ref TargetGroupVpcId
+      TargetType: ip 
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
+
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ALBListenerCertificate
+
+  ALBListenerCertificate: 
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Ref ALBDomainName 
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref ALBDomainName
+          HostedZoneId: !Ref ALBHostedZoneId
+      Tags:
+        - Key: Name
+          Value: !Sub ${ALBDomainName}-Certificate
+
+
+Outputs:
+  ALBDnsName:
+    Value: !GetAtt ApplicationLoadBalancer.DNSName 
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBDnsName
+
+  ALBCanonicalHostedZoneID:
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBCanonicalHostedZoneID
