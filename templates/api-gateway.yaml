@@ -42,6 +42,7 @@ Resources:
       StageName: !Ref BookApiStageName
 
   BooksApiUsagePlan:
+    DependsOn: BooksApiDeployment
     Type: 'AWS::ApiGateway::UsagePlan'
     Properties:
       ApiStages:
