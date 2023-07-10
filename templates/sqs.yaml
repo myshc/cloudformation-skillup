@@ -42,7 +42,7 @@ Parameters:
     Type: Number
     Default: 0
 
-  UsedeadletterQueue:
+  CreateDeadLetterQueue:
     Description: |
       A dead-letter queue is a queue that other (source) queues can target for messages 
       that can't be processed (consumed) successfully. 
@@ -64,7 +64,7 @@ Parameters:
 
 Conditions:
   CreateDeadLetterQueue: !Equals
-    - !Ref UsedeadletterQueue
+    - !Ref CreateDeadLetterQueue
     - true
 
 
@@ -80,14 +80,25 @@ Resources:
       RedrivePolicy:
         Fn::If:
           - CreateDeadLetterQueue
-          - deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
+          - deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
             maxReceiveCount: 5
           - !Ref AWS::NoValue
       VisibilityTimeout: !Ref VisibilityTimeout
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Queue
+        - Key: Environment 
+          Value: !Ref Environment
 
-  MyDeadLetterQueue:
+  DeadLetterQueue:
     Condition: CreateDeadLetterQueue
     Type: AWS::SQS::Queue
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-Queue
+        - Key: Environment 
+          Value: !Ref Environment
 
 
 Outputs:
@@ -112,13 +123,13 @@ Outputs:
   DeadLetterQueueURL:
     Condition: CreateDeadLetterQueue
     Description: URL of the dead letter queue
-    Value: !Ref MyDeadLetterQueue
+    Value: !Ref DeadLetterQueue
     Export:
       Name: !Sub ${AWS::StackName}::DeadLetterQueueURL
 
   DeadLetterQueueARN:
     Condition: CreateDeadLetterQueue
     Description: ARN of the dead letter queue
-    Value: !GetAtt MyDeadLetterQueue.Arn
+    Value: !GetAtt DeadLetterQueue.Arn
     Export:
       Name: !Sub ${AWS::StackName}::DeadLetterQueueARN

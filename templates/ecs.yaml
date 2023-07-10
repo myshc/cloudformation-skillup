@@ -6,6 +6,11 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
           default: Cluster configuration 
         Parameters:
           - ClusterName 
@@ -29,6 +34,12 @@ Metadata:
 
 
 Parameters:
+  Environment:
+    Description: Choose the environment.
+    Type: String
+    Default: Dev
+    AllowedValues: [Dev, QA, Prod]
+
   ImageTag:
     Default: 0.0.1
     Type: String
@@ -66,12 +77,23 @@ Parameters:
   TargetGroupArn:
     Type: String
 
+  DesiredCapacity:
+    Description: Desired containers count 
+    Type: Number
+    Default: 2
+
+
 Resources:
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref ClusterName 
       CapacityProviders: [FARGATE, FARGATE_SPOT]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-Cluster
+        - Key: Environment 
+          Value: !Ref Environment
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -107,11 +129,21 @@ Resources:
               ValueFrom: !Sub '${DBSecretArn}:port::'
             - Name: DB_NAME
               ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmDBName}
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-TaskDefinition-${RepositoryName}
+        - Key: Environment 
+          Value: !Ref Environment
 
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Join ['', [/ecs/, !Ref RepositoryName, TaskDefinition]]
+      LogGroupName: !Join ['/', [/ecs, !Ref Environment, !Ref RepositoryName]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-LogGroup-${RepositoryName}
+        - Key: Environment 
+          Value: !Ref Environment
 
   ExecutionRole:
     Type: AWS::IAM::Role
@@ -148,17 +180,19 @@ Resources:
                   - "ssm:GetParameters"
                   - "ssm:GetParameter"
                 Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-Role
+        - Key: Environment 
+          Value: !Ref Environment
 
   Service:
     Type: AWS::ECS::Service
     Properties: 
-      ServiceName: !Ref ClusterName
+      ServiceName: !Ref RepositoryName
       Cluster: !Ref Cluster
       TaskDefinition: !Ref TaskDefinition
-      DeploymentConfiguration:
-        MinimumHealthyPercent: 100
-        MaximumPercent: 200
-      DesiredCount: 2
+      DesiredCount: !Ref DesiredCapacity
       LaunchType: FARGATE
       NetworkConfiguration: 
         AwsvpcConfiguration:
@@ -172,3 +206,60 @@ Resources:
         - ContainerName: !Ref RepositoryName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroupArn
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-Service-${ClusterName}
+        - Key: Environment 
+          Value: !Ref Environment
+
+
+Outputs:
+  ClusterName:
+    Value: !Ref Cluster
+    Export:
+      Name: !Sub ${AWS::StackName}::ClusterName
+
+  ClusterArn:
+    Value: !GetAtt Cluster.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::ClusterArn
+
+  TaskDefinitionArn:
+    Value: !Ref TaskDefinition
+    Export:
+      Name: !Sub ${AWS::StackName}::TaskDefinitionArn
+
+  LogGroupName:
+    Value: !Ref LogGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::LogGroupName
+
+  LogGroupArn:
+    Value: !GetAtt LogGroup.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::LogGroupArn
+
+  ExecutionRoleName:
+    Value: !Ref ExecutionRole 
+    Export:
+      Name: !Sub ${AWS::StackName}::ExecutionRoleName
+
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}::ExecutionRoleArn
+
+  ExecutionRoleId:
+    Value: !GetAtt ExecutionRole.RoleId
+    Export:
+      Name: !Sub ${AWS::StackName}::ExecutionRoleId
+
+  ServiceArn:
+    Value: !Ref Service 
+    Export:
+      Name: !Sub ${AWS::StackName}::ServiceArn
+
+  ServiceName:
+    Value: !GetAtt Service.Name
+    Export:
+      Name: !Sub ${AWS::StackName}::ServiceName

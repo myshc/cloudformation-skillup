@@ -32,10 +32,7 @@ Parameters:
       Default is Dev.
     Type: String
     Default: Dev
-    AllowedValues:
-      - Dev
-      - QA
-      - Prod
+    AllowedValues: [Dev, QA, Prod]
 
   LatestAmiId:
     Description: |
@@ -97,3 +94,5 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-Prometheus-01
+        - Key: Environment 
+          Value: !Ref Environment

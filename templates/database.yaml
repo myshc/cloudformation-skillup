@@ -65,8 +65,8 @@ Parameters:
     Description: Enter a valid Database master password.
     Type: String
     NoEcho: true
-    MinLength: 16
-    MaxLength: 32
+    #MinLength: 16
+    #MaxLength: 32
 
   DBStorage:
     Description: |
@@ -109,6 +109,8 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub ${Environment}-DB-subnet-group
+        - Key: Environment 
+          Value: !Ref Environment
 
   Database:
     Type: AWS::RDS::DBInstance
@@ -129,6 +131,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-DB
+        - Key: Environment 
+          Value: !Ref Environment
 
 
 Outputs:

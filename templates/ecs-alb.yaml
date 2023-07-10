@@ -52,8 +52,9 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
 
   ALBHostedZoneId:
-    Description: Select a dns zone id. 
-    Type: AWS::Route53::HostedZone::Id
+    Description: Enter a dns zone id. 
+      #Type: AWS::Route53::HostedZone::Id
+    Type: String
 
   ALBDomainName:
     Description: Enter a domain name for ALB.
@@ -88,6 +89,8 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub ${Environment}-ALB
+        - Key: Environment 
+          Value: !Ref Environment
 
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -144,3 +147,18 @@ Outputs:
     Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}::ALBCanonicalHostedZoneID
+
+  ALBTargetGroupArn:
+    Value: !GetAtt ALBTargetGroup.TargetGroupArn
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBTargetGroupArn
+
+  ALBTargetGroupFullName:
+    Value: !GetAtt ALBTargetGroup.TargetGroupFullName
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBTargetGroupFullName
+
+  ALBTargetGroupName:
+    Value: !GetAtt ALBTargetGroup.TargetGroupName
+    Export:
+      Name: !Sub ${AWS::StackName}::ALBTargetGroupName

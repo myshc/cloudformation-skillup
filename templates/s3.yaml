@@ -3,6 +3,13 @@ Description: S3 bucket with life cycle policy
 
 
 Parameters:
+  Environment:
+    Description: |
+      Choose the environment.
+    Type: String
+    Default: Dev
+    AllowedValues: [Dev, QA, Prod]
+
   BucketName:
     Description: Enter S3 bucket name
     Type: String
@@ -27,7 +34,11 @@ Resources:
               - TransitionInDays: 90
                 StorageClass: GLACIER
             ExpirationInDays: 365
-
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-S3-Bucket
+        - Key: Environment 
+          Value: !Ref Environment
 
 Outputs:
   s3BucketNameOutput:

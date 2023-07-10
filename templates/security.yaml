@@ -10,6 +10,12 @@ Metadata:
         Parameters:
           - Environment
           - VpcId
+          - CreateWebSecurityGroup
+          - CreateALBSecurityGroup
+          - CreateDBSecurityGroup
+          - CreateJenkinsSecurityGroup
+          - CreatePrometheusSecurityGroup
+          - CreateEcsSecurityGroup
 
       - Label:
           default: Security group rules configuration 
@@ -23,18 +29,13 @@ Parameters:
     Description: Choose the environment.
     Type: String
     Default: Dev
-    AllowedValues:
-      - Dev
-      - QA
-      - Prod
+    AllowedValues: [Dev, QA, Prod]
 
   DBEngine:
     Description: Select database engine.
     Type: String
     Default: mysql
-    AllowedValues:
-      - mysql
-      - postgres
+    AllowedValues: [mysql, postgres]
 
   VpcId:
     Description: Select a vpc. 
@@ -45,14 +46,52 @@ Parameters:
     Type: String
     Default: 0.0.0.0/0
 
+  CreateWebSecurityGroup:
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
+  CreateALBSecurityGroup:
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
+  CreateDBSecurityGroup:
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
+  CreateJenkinsSecurityGroup:
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
+  CreatePrometheusSecurityGroup:
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
+  CreateEcsSecurityGroup:
+    Description: Requires CreateALBSecurityGroup and DBSecurityGroup to be enabled
+    Type: String
+    Default: yes
+    AllowedValues: [yes, no]
+
 
 Conditions:
-  IsDBEngineMySQL: !Equals [!Ref DBEngine, mysql]
+  IsDBEngineMySQL:               !Equals [!Ref DBEngine,                      mysql]
+  CreateWebSecurityGroup:        !Equals [!Ref CreateWebSecurityGroup,        yes]
+  CreateALBSecurityGroup:        !Equals [!Ref CreateALBSecurityGroup,        yes]
+  CreateDBSecurityGroup:         !Equals [!Ref CreateDBSecurityGroup,         yes]
+  CreateJenkinsSecurityGroup:    !Equals [!Ref CreateJenkinsSecurityGroup,    yes]
+  CreatePrometheusSecurityGroup: !Equals [!Ref CreatePrometheusSecurityGroup, yes]
+  CreateEcsSecurityGroup:        !Equals [!Ref CreateEcsSecurityGroup,        yes]
 
 
 Resources:
   WebSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateWebSecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: !Sub ${Environment} Web server security group
@@ -80,9 +119,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-Web-SG
+        - Key: Environment 
+          Value: !Ref Environment
 
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateALBSecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: !Sub ${Environment} application load balancer security group
@@ -101,9 +143,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-ALB-SG
+        - Key: Environment 
+          Value: !Ref Environment
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateDBSecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: !Sub ${Environment} database security group
@@ -118,18 +163,21 @@ Resources:
             - IsDBEngineMySQL
             - 3306
             - 5432
-          SourceSecurityGroupId: !Ref WebSecurityGroup
-          Description: Allow connection to all web sg
+          SourceSecurityGroupId: !Ref EcsSecurityGroup
+          Description: Allow inbound traffic to ECS sg
       SecurityGroupEgress:
         - IpProtocol: -1
-          DestinationSecurityGroupId: !Ref WebSecurityGroup
-          Description: Allow outbound traffic only to web sg 
+          DestinationSecurityGroupId: !Ref EcsSecurityGroup
+          Description: Allow outbound traffic to ECS sg 
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-DB-SG
+        - Key: Environment 
+          Value: !Ref Environment
 
   JenkinsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateJenkinsSecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: !Sub ${Environment} Jenkins server security group
@@ -157,9 +205,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-Jenkins-SG
+        - Key: Environment 
+          Value: !Ref Environment
 
   PrometheusSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreatePrometheusSecurityGroup
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: !Sub ${Environment} Prometheus server security group
@@ -192,25 +243,66 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Environment}-Prometheus-SG
+        - Key: Environment 
+          Value: !Ref Environment
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateEcsSecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: !Sub ${Environment} ECS security group
+      GroupName: !Sub ${Environment}EcsSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Allow inbound traffic to ALB sg
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow outbound traffic to all destinations
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-SG
+        - Key: Environment 
+          Value: !Ref Environment
 
 
 Outputs:
   WebSecurityGroupId:
+    Condition: CreateWebSecurityGroup
     Value: !Ref WebSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::WebSecurityGroupId
 
   ALBSecurityGroupId:
+    Condition: CreateALBSecurityGroup
     Value: !Ref ALBSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::ALBSecurityGroupId
 
   DBSecurityGroupId:
+    Condition: CreateDBSecurityGroup
     Value: !Ref DBSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::DBSecurityGroupId
 
   JenkinsSecurityGroupId:
+    Condition: CreateJenkinsSecurityGroup
     Value: !Ref JenkinsSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}::JenkinsSecurityGroupId
+
+  PrometheusSecurityGroupId:
+    Condition: CreatePrometheusSecurityGroup
+    Value: !Ref PrometheusSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::PrometheusSecurityGroupId
+
+  EcsSecurityGroupId:
+    Condition: CreateEcsSecurityGroup
+    Value: !Ref EcsSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}::EcsSecurityGroupId

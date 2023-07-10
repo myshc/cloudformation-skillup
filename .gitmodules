@@ -1,3 +1,6 @@
 [submodule "spring-books-api"]
 	path = spring-books-api
 	url = git@github.com:myshc/spring-books-api.git
+[submodule "stop-start-environment"]
+	path = stop-start-environment
+	url = git@github.com:myshc/stop-start-environment.git

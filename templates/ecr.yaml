@@ -3,6 +3,12 @@ Description: ECR repository
 
 
 Parameters:
+  Environment:
+    Description: Choose the environment.
+    Type: String
+    Default: Dev
+    AllowedValues: [Dev, QA, Prod]
+
   ImageTagMutability:
     Description: IMMUTABLE | MUTABLE
     Default: MUTABLE
@@ -19,15 +25,26 @@ Parameters:
       - false
 
   RepositoryName:
+    Description: If Environment is set to Dev, then repository name would be dev-RepositoryName
     Type: String
     Default: spring-books-api
+
+
+Mappings:
+  Environment:
+    Dev:
+      lowercase: !Sub dev-${RepositoryName}
+    QA:
+      lowercase: qa 
+    Prod:
+      lowercase: prod 
 
 
 Resources:
   Repository: 
     Type: AWS::ECR::Repository
     Properties: 
-      RepositoryName: !Ref RepositoryName
+      RepositoryName: !Join ['-', !FindInMap [Environment, !Ref Environment, lowercase], !Ref RepositoryName]
       ImageTagMutability: !Ref ImageTagMutability
       ImageScanningConfiguration:
         ScanOnPush: !Ref ImageScanOnPush
@@ -49,6 +66,11 @@ Resources:
               }
             ]
           }
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECR-${RepositoryName}
+        - Key: Environment 
+          Value: !Ref Environment
 
 
 Outputs:

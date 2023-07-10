@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS cluster autoscaling
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General configuration 
+        Parameters:
+          - Environment
+
+      - Label:
+          default: SQS configuration 
+        Parameters:
+          - QueueName
+
+      - Label:
+          default: ECS configuration 
+        Parameters:
+          - EcsServiceName
+          - EcsClusterName
+          - ScalingMinCapacity
+          - ScalingMaxCapacity
+
+
+Parameters:
+  Environment:
+    Description: Choose the environment.
+    Type: String
+    Default: Dev
+    AllowedValues: [Dev, QA, Prod]
+
+  EcsServiceName:
+    Type: String
+
+  EcsClusterName:
+    Type: String
+
+  QueueName:
+    Type: String
+
+  ScalingMinCapacity:
+    Description: Minimum number of tasks in the ECS service
+    Type: Number
+    Default: 2
+
+  ScalingMaxCapacity:
+    Description: Maximum number of tasks in the ECS service
+    Type: Number
+    Default: 4
+
+
+Resources:
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: !Ref ScalingMaxCapacity
+      MinCapacity: !Ref ScalingMinCapacity
+      ResourceId: !Sub service/${EcsClusterName}/${EcsServiceName}
+      RoleARN: !GetAtt AutoScalingRole.Arn
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+      SuspendedState:
+        DynamicScalingInSuspended: false
+        DynamicScalingOutSuspended: false
+        ScheduledScalingSuspended: false
+
+  AutoScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${Environment}-ECS-AutoScalingRole-${EcsClusterName}-${EcsServiceName}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: application-autoscaling.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole"
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-ECS-ApplicationAutoScaling-Role
+        - Key: Environment 
+          Value: !Ref Environment
+
+  AlarmScaleUp:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ScaleUpAlarm
+      AlarmDescription: Scale up ECS service based on queue message count
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref QueueName
+      Statistic: Average 
+      Period: 60
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      TreatMissingData: missing
+      AlarmActions:
+        - Ref: ScaleUpPolicy
+
+  ScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ScaleUpPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref ScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        Cooldown: 120
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 1
+
+  AlarmScaleDown:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ScaleDownAlarm
+      AlarmDescription: Scale down ECS service based on queue message count
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref QueueName
+      Statistic: Average 
+      Period: 60
+      Threshold: 1
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      TreatMissingData: missing
+      AlarmActions:
+        - Ref: ScaleDownPolicy
+
+  ScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ScaleDownPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref ScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        Cooldown: 120
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
